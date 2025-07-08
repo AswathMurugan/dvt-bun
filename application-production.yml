@@ -1,0 +1,45 @@
+# Production Configuration Override
+# This file contains production-specific settings
+
+# Application Configuration
+app:
+  environment: "production"
+
+# Server Configuration
+server:
+  timeout: 300000  # 5 minutes for production
+  keepAliveTimeout: 10000
+
+# IAM Configuration for Production
+iam:
+  url: "${IAM_URL}"  # Must be provided via environment/ConfigMap
+  clientId: "${IAM_CLIENT_ID}"  # Must be provided via environment/ConfigMap
+  clientSecret: "${IAM_CLIENT_SECRET}"  # Must be provided via environment/ConfigMap
+  tenantName: "${IAM_TENANT_NAME}"  # Must be provided via environment/ConfigMap
+  timeout: 60000  # 1 minute timeout for production
+  retryAttempts: 5
+
+# JavaScript Execution Configuration
+execution:
+  timeout: 10000  # 10 seconds for production
+  maxCodeLength: 500000  # 500KB for production
+
+# Logging Configuration
+logging:
+  level: "warn"
+  format: "json"
+  enableRequestLogging: true
+  enableExecutionLogging: false  # Disable detailed execution logging in production
+
+# Security Configuration
+security:
+  enableCors: true
+  corsOrigins: "${CORS_ORIGINS:https://*.jiffy.ai,https://*.company.com}"
+  enableRateLimit: true
+  rateLimitRequests: 1000
+  rateLimitWindow: 900000  # 15 minutes
+
+# Health Check Configuration
+health:
+  enabled: true
+  timeout: 10000

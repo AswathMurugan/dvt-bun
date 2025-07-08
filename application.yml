@@ -1,0 +1,58 @@
+# JavaScript Executor API Configuration
+# This file can be overridden by Kubernetes ConfigMaps for different environments
+
+# Application Configuration
+app:
+  name: "JavaScript Executor API"
+  version: "1.0.0"
+  environment: "${NODE_ENV:development}"
+  port: ${PORT:3000}
+  host: "${APP_HOST:https://integrationtest.jiffy.ai/platform}"
+
+# Server Configuration
+server:
+  host: "0.0.0.0"
+  port: ${PORT:3000}
+  timeout: 120000  # 2 minutes
+  keepAliveTimeout: 5000
+
+# IAM Configuration
+iam:
+  url: "${IAM_URL:https://integrationtest.jiffy.ai/}"
+  grantType: "${IAM_GRANT_TYPE:client_credentials}"
+  scope: "${IAM_SCOPE:openid email profile}"
+  clientId: "${IAM_CLIENT_ID:apex-workhorse-renderer}"
+  clientSecret: "${IAM_CLIENT_SECRET:f43367cb-7ea7-4858-dd99-e5737181bd7c}"
+  tenantName: "${IAM_TENANT_NAME:jiffy}"
+  timeout: ${IAM_TIMEOUT:30000}
+  retryAttempts: ${IAM_RETRY_ATTEMPTS:3}
+
+# JavaScript Execution Configuration
+execution:
+  timeout: ${JS_EXECUTION_TIMEOUT:5000}  # 5 seconds
+  maxCodeLength: ${JS_MAX_CODE_LENGTH:100000}  # 100KB
+  sandbox:
+    allowHttp: ${JS_ALLOW_HTTP:true}
+    allowConsole: ${JS_ALLOW_CONSOLE:true}
+    allowTimers: ${JS_ALLOW_TIMERS:true}
+
+# Logging Configuration
+logging:
+  level: "${LOG_LEVEL:info}"
+  format: "${LOG_FORMAT:json}"
+  enableRequestLogging: ${ENABLE_REQUEST_LOGGING:true}
+  enableExecutionLogging: ${ENABLE_EXECUTION_LOGGING:true}
+
+# Security Configuration
+security:
+  enableCors: ${ENABLE_CORS:true}
+  corsOrigins: "${CORS_ORIGINS:*}"
+  enableRateLimit: ${ENABLE_RATE_LIMIT:false}
+  rateLimitRequests: ${RATE_LIMIT_REQUESTS:100}
+  rateLimitWindow: ${RATE_LIMIT_WINDOW:900000}  # 15 minutes
+
+# Health Check Configuration
+health:
+  enabled: ${HEALTH_CHECK_ENABLED:true}
+  endpoint: "/health"
+  timeout: ${HEALTH_CHECK_TIMEOUT:5000}

@@ -1,0 +1,140 @@
+# Kubernetes Deployment for JavaScript Executor API
+# This deployment uses ConfigMap and Secrets for configuration
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: js-executor-api
+  namespace: default
+  labels:
+    app: js-executor-api
+    version: v1
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: js-executor-api
+  template:
+    metadata:
+      labels:
+        app: js-executor-api
+        version: v1
+    spec:
+      containers:
+      - name: js-executor
+        image: js-executor-api:latest
+        ports:
+        - containerPort: 3000
+          name: http
+        env:
+        # Environment variables from Secret
+        - name: IAM_CLIENT_ID
+          valueFrom:
+            secretKeyRef:
+              name: js-executor-secrets
+              key: IAM_CLIENT_ID
+        - name: IAM_CLIENT_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: js-executor-secrets
+              key: IAM_CLIENT_SECRET
+        - name: IAM_TENANT_NAME
+          valueFrom:
+            secretKeyRef:
+              name: js-executor-secrets
+              key: IAM_TENANT_NAME
+        # Additional environment variables
+        - name: NODE_ENV
+          value: "production"
+        - name: LOG_LEVEL
+          value: "warn"
+        
+        # Mount ConfigMap as configuration file
+        volumeMounts:
+        - name: config-volume
+          mountPath: /etc/config
+          readOnly: true
+        
+        # Resource limits
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "250m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+        
+        # Health checks
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 3000
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+        
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 3000
+          initialDelaySeconds: 5
+          periodSeconds: 5
+          timeoutSeconds: 3
+          failureThreshold: 3
+      
+      volumes:
+      - name: config-volume
+        configMap:
+          name: js-executor-config
+          items:
+          - key: application.yml
+            path: application.yml
+
+---
+# Service to expose the deployment
+apiVersion: v1
+kind: Service
+metadata:
+  name: js-executor-service
+  namespace: default
+  labels:
+    app: js-executor-api
+spec:
+  selector:
+    app: js-executor-api
+  ports:
+  - name: http
+    port: 80
+    targetPort: 3000
+    protocol: TCP
+  type: ClusterIP
+
+---
+# Optional: Ingress for external access
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: js-executor-ingress
+  namespace: default
+  labels:
+    app: js-executor-api
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+spec:
+  tls:
+  - hosts:
+    - js-executor.your-domain.com
+    secretName: js-executor-tls
+  rules:
+  - host: js-executor.your-domain.com
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: js-executor-service
+            port:
+              number: 80

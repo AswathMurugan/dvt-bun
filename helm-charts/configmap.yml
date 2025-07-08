@@ -1,0 +1,85 @@
+# Kubernetes ConfigMap for JavaScript Executor API
+# This creates the application.yml configuration file in the pod
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: js-executor-config
+  namespace: default
+  labels:
+    app: js-executor-api
+    component: config
+data:
+  application.yml: |
+    # JavaScript Executor API Configuration - Kubernetes Deployment
+    
+    # Application Configuration
+    app:
+      name: "JavaScript Executor API"
+      version: "1.0.0"
+      environment: "production"
+      port: 3000
+    
+    # Server Configuration
+    server:
+      host: "0.0.0.0"
+      port: 3000
+      timeout: 300000  # 5 minutes
+      keepAliveTimeout: 10000
+    
+    # IAM Configuration
+    iam:
+      url: "https://production.jiffy.ai/"
+      grantType: "client_credentials"
+      scope: "openid email profile"
+      clientId: "${IAM_CLIENT_ID}"
+      clientSecret: "${IAM_CLIENT_SECRET}"
+      tenantName: "${IAM_TENANT_NAME}"
+      timeout: 60000
+      retryAttempts: 5
+    
+    # JavaScript Execution Configuration
+    execution:
+      timeout: 10000  # 10 seconds
+      maxCodeLength: 500000  # 500KB
+      sandbox:
+        allowHttp: true
+        allowConsole: true
+        allowTimers: true
+    
+    # Logging Configuration
+    logging:
+      level: "warn"
+      format: "json"
+      enableRequestLogging: true
+      enableExecutionLogging: false
+    
+    # Security Configuration
+    security:
+      enableCors: true
+      corsOrigins: "https://*.jiffy.ai,https://*.company.com"
+      enableRateLimit: true
+      rateLimitRequests: 1000
+      rateLimitWindow: 900000  # 15 minutes
+    
+    # Health Check Configuration
+    health:
+      enabled: true
+      endpoint: "/health"
+      timeout: 10000
+
+---
+# Secret for sensitive IAM credentials
+apiVersion: v1
+kind: Secret
+metadata:
+  name: js-executor-secrets
+  namespace: default
+  labels:
+    app: js-executor-api
+    component: secrets
+type: Opaque
+stringData:
+  IAM_CLIENT_ID: "your-production-client-id"
+  IAM_CLIENT_SECRET: "your-production-client-secret"
+  IAM_TENANT_NAME: "your-production-tenant"
