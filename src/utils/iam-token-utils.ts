@@ -3,6 +3,8 @@
  * Converts Java HttpClient implementation to TypeScript fetch API
  */
 
+import { logger } from './logger';
+
 /**
  * Configuration interface for IAM token service
  */
@@ -79,7 +81,7 @@ export class IAMTokenUtils {
     formData.append('scope', this.scope);
 
     try {
-      console.log(`[IAM] Requesting token for tenant: ${tenantName}`);
+      logger.info('IAM Requesting token for tenant', { tenantId: tenantName });
       
       const response = await fetch(iamURL, {
         method: 'POST',
@@ -92,7 +94,10 @@ export class IAMTokenUtils {
 
       // Check if response is null or status is not 200
       if (!response || response.status !== 200) {
-        console.error(`[IAM] API Response error. Status: ${response?.status}, URL: ${iamURL}`);
+        logger.error('IAM API Response error', { tenantId: tenantName }, {
+          status: response?.status,
+          url: iamURL
+        });
         throw new TokenException(400, 4002, 'error while getting new token');
       }
 
@@ -101,13 +106,15 @@ export class IAMTokenUtils {
       try {
         tokenResponse = await response.json() as TokenResponse;
       } catch (parseError) {
-        console.error(`[IAM] Error parsing response:`, parseError);
+        logger.error('IAM Error parsing response', { tenantId: tenantName }, {
+          error: parseError
+        });
         throw new TokenException(400, 4003, 'error while parsing token response');
       }
 
       // Check if token response is valid
       if (!tokenResponse || tokenResponse.error) {
-        console.error(`[IAM] Error in token response:`, {
+        logger.error('IAM Error in token response', { tenantId: tenantName }, {
           error: tokenResponse?.error,
           error_description: tokenResponse?.error_description,
           status: response.status
@@ -117,11 +124,13 @@ export class IAMTokenUtils {
 
       // Validate access token presence
       if (!tokenResponse.access_token) {
-        console.error(`[IAM] No access token in response:`, tokenResponse);
+        logger.error('IAM No access token in response', { tenantId: tenantName }, {
+          tokenResponse
+        });
         throw new TokenException(400, 4003, 'access token not found in response');
       }
 
-      console.log(`[IAM] Token generated successfully for tenant: ${tenantName}`);
+      logger.info('IAM Token generated successfully for tenant', { tenantId: tenantName });
       return `Bearer ${tokenResponse.access_token}`;
 
     } catch (error) {
@@ -131,7 +140,9 @@ export class IAMTokenUtils {
       }
 
       // Handle other errors (network, etc.)
-      console.error('[IAM] Error while getting IAM token:', error);
+      logger.error('IAM Error while getting IAM token', { tenantId: tenantName }, {
+        error: error
+      });
       throw new TokenException(500, 5000, 'error while getting new token');
     }
   }

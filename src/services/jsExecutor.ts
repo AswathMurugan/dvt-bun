@@ -1,5 +1,6 @@
 import { VM } from 'vm2';
 import { RestClient, JavaMock } from '../utils/java-bridge';
+import { logger } from '../utils/logger';
 
 // Use require for xmlhttprequest to avoid TypeScript declaration issues
 const XMLHttpRequest = require('xmlhttprequest').XMLHttpRequest;
@@ -55,7 +56,7 @@ function cleanupCode(code: string): string {
  * @returns Promise containing the execution result and timing information
  * @throws Error if execution fails, times out, or function is not found
  */
-export async function executeJavaScript(code: string, input: any[], functionName: string): Promise<{ result: any; executionTime: number }> {
+export async function executeJavaScript(code: string, input: any[], functionName: string, skipWrapper: boolean = false): Promise<{ result: any; executionTime: number }> {
   const startTime = performance.now();
   let vm: VM | null = null;
   
@@ -67,7 +68,7 @@ export async function executeJavaScript(code: string, input: any[], functionName
     } catch (validationError) {
       const endTime = performance.now();
       const executionTime = Math.round((endTime - startTime) * 100) / 100;
-      console.error('[EXECUTOR] Validation error:', validationError);
+      logger.error('EXECUTOR Validation error', {}, { error: validationError });
       throw Object.assign(new Error(validationError instanceof Error ? validationError.message : 'Validation failed'), { executionTime });
     }
     
@@ -79,7 +80,7 @@ export async function executeJavaScript(code: string, input: any[], functionName
         cleanedCode.includes('new RestClient()') &&
         cleanedCode.includes('.call(')) {
       
-      console.log('[EXECUTOR] Detected RestClient usage, adding await to .call() methods');
+      logger.info('EXECUTOR Detected RestClient usage, adding await to .call() methods');
       
       // Replace myRestClient.call( with await myRestClient.call( (simple and safe)
       processedCode = cleanedCode.replace(
@@ -87,10 +88,7 @@ export async function executeJavaScript(code: string, input: any[], functionName
         'await myRestClient.call('
       );
       
-      console.log('[EXECUTOR] Full processed code:');
-      console.log('='.repeat(80));
-      console.log(processedCode);
-      console.log('='.repeat(80));
+      logger.info('EXECUTOR Full processed code', {}, { processedCode });
     }
     
     // Create VM2 instance with comprehensive sandbox for safe execution
@@ -103,10 +101,10 @@ export async function executeJavaScript(code: string, input: any[], functionName
         
         // Console support
         console: {
-          log: (...args: any[]) => console.log('[VM]', ...args),
-          error: (...args: any[]) => console.error('[VM]', ...args),
-          warn: (...args: any[]) => console.warn('[VM]', ...args),
-          info: (...args: any[]) => console.info('[VM]', ...args)
+          log: (...args: any[]) => logger.info('VM', {}, { args }),
+          error: (...args: any[]) => logger.error('VM', {}, { args }),
+          warn: (...args: any[]) => logger.warn('VM', {}, { args }),
+          info: (...args: any[]) => logger.info('VM', {}, { args })
         },
 
         // Timer support
@@ -142,21 +140,59 @@ export async function executeJavaScript(code: string, input: any[], functionName
       allowAsync: true
     });
     
-    const wrappedCode = `
-      try {
-        ${processedCode}
-        
-        if (typeof ${functionName} !== 'function') {
-          throw new Error('Function "${functionName}" is not defined or not a function');
-        }
-        
-        const __result__ = ${functionName}(...${JSON.stringify(input)});
-        __result__;
-      } catch (__error__) {
-        // Re-throw the exact error that occurred during execution
-        throw __error__;
+    let wrappedCode: string;
+    
+    if (skipWrapper) {
+      // For transform API - code may be bundled and already has error handling
+      // Check if this looks like bundled code (no imports/exports, more complex structure)
+      const isBundledCode = !processedCode.includes('import ') && 
+                           !processedCode.includes('export ') && 
+                           processedCode.length > 1000; // Bundled code is typically larger
+      
+      if (isBundledCode) {
+        // Bundled code - execute directly, it should have proper function definitions
+        wrappedCode = `
+          ${processedCode}
+          
+          // For bundled code, the function should be available directly
+          if (typeof ${functionName} !== 'function') {
+            throw new Error('Function "${functionName}" is not defined or not a function in bundled code');
+          }
+          
+          const __result__ = ${functionName}(...${JSON.stringify(input)});
+          __result__;
+        `;
+      } else {
+        // Non-bundled transform code - code already has try-catch, just execute directly
+        wrappedCode = `
+          ${processedCode}
+          
+          if (typeof ${functionName} !== 'function') {
+            throw new Error('Function "${functionName}" is not defined or not a function');
+          }
+          
+          const __result__ = ${functionName}(...${JSON.stringify(input)});
+          __result__;
+        `;
       }
-    `;
+    } else {
+      // For regular execute API - wrap in try-catch for better error handling
+      wrappedCode = `
+        try {
+          ${processedCode}
+          
+          if (typeof ${functionName} !== 'function') {
+            throw new Error('Function "${functionName}" is not defined or not a function');
+          }
+          
+          const __result__ = ${functionName}(...${JSON.stringify(input)});
+          __result__;
+        } catch (__error__) {
+          // Re-throw the exact error that occurred during execution
+          throw __error__;
+        }
+      `;
+    }
     
     // Execute code with additional error handling
     let result: any;
@@ -167,7 +203,7 @@ export async function executeJavaScript(code: string, input: any[], functionName
       const executionTime = Math.round((endTime - startTime) * 100) / 100;
       
       // Log VM execution error for debugging
-      console.error('[EXECUTOR] VM execution failed:', {
+      logger.error('EXECUTOR VM execution failed', {}, {
         error: vmError instanceof Error ? vmError.message : vmError,
         functionName,
         executionTime,
@@ -178,7 +214,7 @@ export async function executeJavaScript(code: string, input: any[], functionName
       try {
         vm = null;
       } catch (cleanupError) {
-        console.error('[EXECUTOR] VM cleanup error:', cleanupError);
+        logger.error('EXECUTOR VM cleanup error', {}, { error: cleanupError });
       }
       
       throw Object.assign(new Error(vmError instanceof Error ? vmError.message : 'VM execution failed'), { executionTime });
@@ -188,7 +224,7 @@ export async function executeJavaScript(code: string, input: any[], functionName
     const executionTime = Math.round((endTime - startTime) * 100) / 100;
     
     // Log successful execution
-    console.log('[EXECUTOR] Execution completed:', {
+    logger.info('EXECUTOR Execution completed', {}, {
       functionName,
       executionTime,
       resultType: typeof result
@@ -204,12 +240,12 @@ export async function executeJavaScript(code: string, input: any[], functionName
       try {
         vm = null;
       } catch (cleanupError) {
-        console.error('[EXECUTOR] VM cleanup error in catch block:', cleanupError);
+        logger.error('EXECUTOR VM cleanup error in catch block', {}, { error: cleanupError });
       }
     }
     
     // Enhanced error handling with detailed logging
-    console.error('[EXECUTOR] Execution failed:', {
+    logger.error('EXECUTOR Execution failed', {}, {
       error: error instanceof Error ? error.message : error,
       functionName,
       executionTime,

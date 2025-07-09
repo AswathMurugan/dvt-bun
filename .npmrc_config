@@ -1,0 +1,4 @@
+//repo.jiffy.ai/repository/dreamer-group/:_authToken=NpmToken.${NEW_NPM_TOKEN}
+registry=https://repo.jiffy.ai/repository/dreamer-group/
+//repo.jiffy.ai/repository/editors/:_authToken=NpmToken.${NEW_NPM_TOKEN}
+@editors:registry=https://repo.jiffy.ai/repository/editors/

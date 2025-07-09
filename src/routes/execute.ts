@@ -1,5 +1,6 @@
 import { executeJavaScript } from '../services/jsExecutor';
 import { getIAMToken } from '../utils/iam-token-utils';
+import { logger } from '../utils/logger';
 import type { ExecuteRequest, ExecuteResponse } from '../types';
 
 /**
@@ -21,11 +22,14 @@ export async function handleExecute(req: Request): Promise<Response> {
     };
 
     // Log incoming request headers
-    console.log('[API] Request received:', {
-      tenantId: jiffyHeaders.tenantId || 'not-provided',
-      appId: jiffyHeaders.appId || 'not-provided', 
-      userId: jiffyHeaders.userId || 'not-provided',
-      requestId: jiffyHeaders.requestId,
+    logger.info('Request received', {
+      tenantId: jiffyHeaders.tenantId,
+      appId: jiffyHeaders.appId,
+      userId: jiffyHeaders.userId,
+      requestId: jiffyHeaders.requestId
+    }, {
+      path: '/execute',
+      endpoint: 'POST /execute',
       userAgent: req.headers.get('user-agent') || 'unknown'
     });
 
@@ -34,7 +38,7 @@ export async function handleExecute(req: Request): Promise<Response> {
     try {
       body = await req.json() as ExecuteRequest;
     } catch (parseError) {
-      console.error('[API] Request parsing failed:', parseError);
+      logger.error('Request parsing failed', {}, { error: parseError });
       return new Response(JSON.stringify({ error: 'Invalid JSON in request body' }), {
         status: 400,
         headers: { 'Content-Type': 'application/json' }
@@ -67,25 +71,33 @@ export async function handleExecute(req: Request): Promise<Response> {
     // Get IAM token for testing (use tenant from header if available)
     let iamToken: string | null = null;
     try {
-      console.log('[API] Attempting to get IAM token for tenant:', jiffyHeaders.tenantId || 'default');
+      logger.info('Attempting to get IAM token for tenant', {
+        tenantId: jiffyHeaders.tenantId,
+        appId: jiffyHeaders.appId,
+        userId: jiffyHeaders.userId,
+        requestId: jiffyHeaders.requestId
+      });
       iamToken = await getIAMToken(jiffyHeaders.tenantId || undefined);
-      console.log('[API] IAM Token obtained successfully:', {
-        tenantId: jiffyHeaders.tenantId || 'default',
-        appId: jiffyHeaders.appId || 'not-provided',
-        userId: jiffyHeaders.userId || 'not-provided',
+      logger.info('IAM Token obtained successfully', {
+        tenantId: jiffyHeaders.tenantId,
+        appId: jiffyHeaders.appId,
+        userId: jiffyHeaders.userId,
+        requestId: jiffyHeaders.requestId
+      }, {
         tokenLength: iamToken.length,
-        tokenPrefix: iamToken.substring(0, 27) + '...', // Show "Bearer " + first 20 chars
+        tokenPrefix: iamToken.substring(0, 27) + '...',
         tokenSuffix: '...' + iamToken.substring(iamToken.length - 10),
         readyToUse: iamToken.startsWith('Bearer ')
       });
     } catch (iamError) {
-      console.warn('[API] Failed to get IAM token:', {
-        error: iamError instanceof Error ? iamError.message : iamError,
-        tenantId: jiffyHeaders.tenantId || 'default',
-        appId: jiffyHeaders.appId || 'not-provided',
-        userId: jiffyHeaders.userId || 'not-provided',
-        functionName,
+      logger.warn('Failed to get IAM token', {
+        tenantId: jiffyHeaders.tenantId,
+        appId: jiffyHeaders.appId,
+        userId: jiffyHeaders.userId,
         requestId: jiffyHeaders.requestId
+      }, {
+        error: iamError instanceof Error ? iamError.message : iamError,
+        functionName
       });
       // Continue execution even if IAM token fails
     }
@@ -100,29 +112,37 @@ export async function handleExecute(req: Request): Promise<Response> {
       executionTime = execution.executionTime;
       
       // Log successful API execution with IAM token info and Jiffy headers
-      console.log('[API] Execution successful:', {
+      logger.info('Execution completed', {
+        tenantId: jiffyHeaders.tenantId,
+        appId: jiffyHeaders.appId,
+        userId: jiffyHeaders.userId,
+        requestId: jiffyHeaders.requestId
+      }, {
+        path: '/execute',
+        endpoint: 'POST /execute',
         functionName,
         executionTime,
+        status: 'success',
         iamTokenAvailable: iamToken !== null,
-        iamTokenLength: iamToken?.length || 0,
-        tenantId: jiffyHeaders.tenantId || 'not-provided',
-        appId: jiffyHeaders.appId || 'not-provided',
-        userId: jiffyHeaders.userId || 'not-provided',
-        requestId: jiffyHeaders.requestId
+        iamTokenLength: iamToken?.length || 0
       });
       
     } catch (executionError) {
       executionTime = (executionError as any).executionTime || 0;
       
       // Log execution error but don't crash the app
-      console.error('[API] Execution error:', {
+      logger.error('Execution failed', {
+        tenantId: jiffyHeaders.tenantId,
+        appId: jiffyHeaders.appId,
+        userId: jiffyHeaders.userId,
+        requestId: jiffyHeaders.requestId
+      }, {
+        path: '/execute',
+        endpoint: 'POST /execute',
         error: executionError instanceof Error ? executionError.message : executionError,
         functionName,
         executionTime,
-        tenantId: jiffyHeaders.tenantId || 'not-provided',
-        appId: jiffyHeaders.appId || 'not-provided',
-        userId: jiffyHeaders.userId || 'not-provided',
-        requestId: jiffyHeaders.requestId
+        status: 'failed'
       });
       
       return new Response(JSON.stringify({ 
@@ -146,13 +166,14 @@ export async function handleExecute(req: Request): Promise<Response> {
     });
   } catch (error) {
     // Catch any unexpected errors to prevent app crashes
-    console.error('[API] Unexpected error in handleExecute:', {
+    logger.error('Unexpected error in handleExecute', {
+      tenantId: req.headers.get('x-jiffy-tenant-id'),
+      appId: req.headers.get('x-jiffy-app-id'),
+      userId: req.headers.get('x-jiffy-user-id'),
+      requestId: req.headers.get('x-request-id')
+    }, {
       error: error instanceof Error ? error.message : error,
-      stack: error instanceof Error ? error.stack : undefined,
-      tenantId: req.headers.get('x-jiffy-tenant-id') || 'not-provided',
-      appId: req.headers.get('x-jiffy-app-id') || 'not-provided',
-      userId: req.headers.get('x-jiffy-user-id') || 'not-provided',
-      requestId: req.headers.get('x-request-id') || 'unknown'
+      stack: error instanceof Error ? error.stack : undefined
     });
     
     return new Response(JSON.stringify({ 

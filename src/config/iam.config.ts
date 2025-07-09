@@ -5,6 +5,7 @@
 
 import { IAMConfig } from '../utils/iam-token-utils';
 import { getConfig } from './config.loader';
+import { logger } from '../utils/logger';
 
 /**
  * IAM Configuration interface for deployment-specific settings
@@ -40,7 +41,7 @@ export function validateIAMConfig(config: DeploymentIAMConfig): boolean {
   
   for (const field of required) {
     if (!config[field as keyof DeploymentIAMConfig]) {
-      console.error(`[CONFIG] Missing required IAM field: ${field}`);
+      logger.error('CONFIG Missing required IAM field', {}, { field });
       return false;
     }
   }
@@ -49,7 +50,7 @@ export function validateIAMConfig(config: DeploymentIAMConfig): boolean {
   try {
     new URL(config.url);
   } catch {
-    console.error(`[CONFIG] Invalid IAM URL format: ${config.url}`);
+    logger.error('CONFIG Invalid IAM URL format', {}, { url: config.url });
     return false;
   }
   
@@ -61,7 +62,7 @@ export function validateIAMConfig(config: DeploymentIAMConfig): boolean {
  */
 export function logIAMConfig(): void {
   const config = getIAMConfig();
-  console.log('[CONFIG] IAM Configuration loaded:', {
+  logger.info('CONFIG IAM Configuration loaded', {}, {
     url: config.url,
     grantType: config.grantType,
     scope: config.scope,

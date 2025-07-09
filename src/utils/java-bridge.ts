@@ -4,6 +4,7 @@
  */
 
 import {getIAMToken} from './iam-token-utils';
+import { logger } from './logger';
 
 /**
  * HTTP Method type definition
@@ -55,17 +56,17 @@ class SyncResponse {
       
       // If still not resolved after timeout, log and return empty result
       if (!this.resolved) {
-        console.error('[SyncResponse] Timeout waiting for HTTP response after 12 seconds');
+        logger.error('SyncResponse Timeout waiting for HTTP response after 12 seconds');
         return '';
       }
     }
     
     if (this.error) {
-      console.error('[SyncResponse] HTTP error occurred:', this.error.message);
+      logger.error('SyncResponse HTTP error occurred', {}, { error: this.error.message });
       throw this.error;
     }
     
-    console.log('[SyncResponse] Returning response:', this.result.substring(0, 200));
+    logger.info('SyncResponse Returning response', {}, { responsePreview: this.result.substring(0, 200) });
     return this.result;
   }
 
@@ -127,7 +128,7 @@ export class RestClient {
   ): Promise<string> {
     const startTime = Date.now();
     
-    console.log(`[DSL-JS] Execution Method: ${method} URL: ${url}`);
+    logger.info('DSL-JS Execution Method', {}, { method, url });
     
     try {
       // Prepare fetch options
@@ -160,13 +161,20 @@ export class RestClient {
       const responseBody = await response.text();
       
       // Log response details for debugging
-      console.log(`[DSL-JS] Response status: ${response.status} ${response.statusText}`);
-      console.log(`[DSL-JS] Response headers:`, Object.fromEntries(response.headers.entries()));
+      logger.info('DSL-JS Response details', {}, {
+        status: response.status,
+        statusText: response.statusText,
+        headers: Object.fromEntries(response.headers.entries())
+      });
       
       // Check if response is successful
       if (!response.ok) {
-        console.error(`[DSL-JS] HTTP Error: ${response.status} ${response.statusText} for URL: ${url}`);
-        console.error(`[DSL-JS] Error response body:`, responseBody.substring(0, 500));
+        logger.error('DSL-JS HTTP Error', {}, {
+          status: response.status,
+          statusText: response.statusText,
+          url,
+          responseBody: responseBody.substring(0, 500)
+        });
         
         // Throw HTTP error directly to API response
         throw new Error(`HTTP ${response.status}: ${response.statusText} - ${responseBody}`);
@@ -175,8 +183,11 @@ export class RestClient {
       const endTime = Date.now();
       const duration = endTime - startTime;
       
-      console.log(`[Lite Workflow] Rest call completed URL: ${url} ${duration}ms`);
-      console.log(`[DSL-JS] Response body preview:`, responseBody.substring(0, 200) + (responseBody.length > 200 ? '...' : ''));
+      logger.info('Lite Workflow Rest call completed', {}, {
+        url,
+        duration: `${duration}ms`,
+        responsePreview: responseBody.substring(0, 200) + (responseBody.length > 200 ? '...' : '')
+      });
       
       return responseBody;
       
@@ -184,7 +195,11 @@ export class RestClient {
       const endTime = Date.now();
       const duration = endTime - startTime;
       
-      console.error(`[DSL-JS] Rest call failed URL: ${url} ${duration}ms`, error);
+      logger.error('DSL-JS Rest call failed', {}, {
+        url,
+        duration: `${duration}ms`,
+        error
+      });
       throw error;
     }
   }
@@ -217,7 +232,12 @@ export class RestClient {
     };
     
     // Log with MDC context (similar to Java's MDC.put)
-    console.log('[USER-LOG]', {
+    logger.info('USER-LOG', {
+      tenantId: mdcContext.tenantId,
+      appId: mdcContext.appId,
+      userId: null,
+      requestId: mdcContext.xB3TraceId
+    }, {
       message,
       ...mdcContext
     });
@@ -233,7 +253,7 @@ export class RestClient {
       // Use existing IAM token utility
       return await getIAMToken(); // Already includes "Bearer " prefix
     } catch (error) {
-      console.warn('[RestClient] Failed to get access token:', error);
+      logger.warn('RestClient Failed to get access token', {}, { error });
       return ''; // Return empty string on failure (matches Java behavior)
     }
   }
@@ -255,7 +275,7 @@ export class JavaBridge {
       case 'ai.jiffy.apex.utils.RestClient':
         return RestClient;
       default:
-        console.warn(`[JavaBridge] Unknown Java class: ${className}`);
+        logger.warn('JavaBridge Unknown Java class', {}, { className });
         return class UnknownClass {};
     }
   }

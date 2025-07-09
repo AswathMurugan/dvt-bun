@@ -13,15 +13,27 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "axios": "^1.2.1",
+    "cel-functions": "1.0.41",
+    "csv-parser": "^3.0.0",
+    "date-fns": "^2.30.0",
+    "esbuild": "^0.25.6",
+    "form-data": "^4.0.0",
+    "fs": "^0.0.1-security",
+    "fs.promises": "^0.1.2",
+    "js-yaml": "^4.1.0",
+    "lodash-es": "4.17.21",
+    "path": "^0.12.7",
+    "rimraf": "^4.4.0",
     "vm2": "^3.9.19",
-    "xmlhttprequest": "^1.8.0",
-    "js-yaml": "^4.1.0"
+    "xmlhttprequest": "^1.8.0"
   },
   "devDependencies": {
     "@types/bun": "latest",
     "@types/node": "^20.0.0",
     "@types/xmlhttprequest": "^1.8.2",
     "@types/js-yaml": "^4.0.5",
+    "@types/lodash": "^4.17.17",
     "typescript": "^5.0.0"
   }
 }

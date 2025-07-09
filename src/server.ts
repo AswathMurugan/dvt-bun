@@ -1,5 +1,7 @@
 import { handleExecute } from './routes/execute';
 import { handleExecuteWithSys } from './routes/execute-with-sys';
+import { handleTransform } from './routes/transform';
+import { logger } from './utils/logger';
 import type { ApiResponse } from './types';
 
 /**
@@ -31,12 +33,18 @@ const server = Bun.serve({
       return await handleExecuteWithSys(req);
     }
 
+    if (req.method === 'POST' && url.pathname.startsWith('/transform/')) {
+      const path = url.pathname.replace('/transform/', '');
+      return await handleTransform(req, path);
+    }
+
     if (req.method === 'GET' && url.pathname === '/') {
       const response: ApiResponse = { 
         message: 'JavaScript Executor API',
         endpoints: {
           'POST /execute': 'Execute JavaScript function with parameters',
-          'POST /execute-with-sys': 'Execute JavaScript function with automatic system variable injection'
+          'POST /execute-with-sys': 'Execute JavaScript function with automatic system variable injection',
+          'POST /transform/{path}': 'Get JavaScript code from Jiffy transformer service and execute it with provided parameters'
         },
         usage: {
           format: {
@@ -61,4 +69,4 @@ const server = Bun.serve({
   }
 });
 
-console.log(`Server running on http://localhost:${server.port}`);
+logger.info(`Server running on http://localhost:${server.port}`);

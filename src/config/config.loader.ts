@@ -6,6 +6,7 @@
 import * as yaml from 'js-yaml';
 import * as fs from 'fs';
 import * as path from 'path';
+import { logger } from '../utils/logger';
 
 /**
  * Application configuration interface
@@ -103,7 +104,7 @@ export class ConfigLoader {
 
     for (const configPath of possiblePaths) {
       if (fs.existsSync(configPath)) {
-        console.log(`[CONFIG] Found configuration file: ${configPath}`);
+        logger.info('CONFIG Found configuration file', {}, { configPath });
         return configPath;
       }
     }
@@ -130,7 +131,7 @@ export class ConfigLoader {
       let envConfig = {};
       
       if (fs.existsSync(envConfigPath)) {
-        console.log(`[CONFIG] Loading environment config: ${envConfigPath}`);
+        logger.info('CONFIG Loading environment config', {}, { envConfigPath });
         envConfig = this.loadYamlFile(envConfigPath);
       }
 
@@ -145,11 +146,11 @@ export class ConfigLoader {
       
       this.config = finalConfig as ApplicationConfig;
       
-      console.log(`[CONFIG] Configuration loaded successfully for environment: ${environment}`);
+      logger.info('CONFIG Configuration loaded successfully for environment', {}, { environment });
       return this.config;
       
     } catch (error) {
-      console.error('[CONFIG] Failed to load configuration:', error);
+      logger.error('CONFIG Failed to load configuration', {}, { error });
       throw new Error(`Configuration loading failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   }
@@ -256,7 +257,7 @@ export class ConfigLoader {
       throw new Error('Execution timeout must be greater than 0');
     }
 
-    console.log('[CONFIG] Configuration validation passed');
+    logger.info('CONFIG Configuration validation passed');
   }
 
   /**
@@ -296,7 +297,7 @@ export class ConfigLoader {
       safeConfig.iam.clientSecret = '***' + safeConfig.iam.clientSecret.slice(-4);
     }
     
-    console.log('[CONFIG] Current configuration:', JSON.stringify(safeConfig, null, 2));
+    logger.info('CONFIG Current configuration', {}, { safeConfig });
   }
 }
 
