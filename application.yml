@@ -21,9 +21,9 @@ iam:
   url: "${IAM_URL:https://integrationtest.jiffy.ai/}"
   grantType: "${IAM_GRANT_TYPE:client_credentials}"
   scope: "${IAM_SCOPE:openid email profile}"
-  clientId: "${IAM_CLIENT_ID:apex-workhorse-renderer}"
-  clientSecret: "${IAM_CLIENT_SECRET:f43367cb-7ea7-4858-dd99-e5737181bd7c}"
-  tenantName: "${IAM_TENANT_NAME:jiffy}"
+  clientId: "${IAM_CLIENT_ID:11r}"
+  clientSecret: "${IAM_CLIENT_SECRET:12}"
+  tenantName: "${IAM_TENANT_NAME:11}"
   timeout: ${IAM_TIMEOUT:30000}
   retryAttempts: ${IAM_RETRY_ATTEMPTS:3}
 
