@@ -36,6 +36,12 @@ execution:
     allowConsole: ${JS_ALLOW_CONSOLE:true}
     allowTimers: ${JS_ALLOW_TIMERS:true}
 
+# Node Modules Path for JavaScript Bundling
+nodeModulesPath: "${NODE_MODULES_PATH:/Users/aswathmurugan/Documents/MyProject/dvt-bun/node_modules}"
+
+# DVT Storage Host for Transform API
+dvtStorageHost: "${DVT_STORAGE_HOST:https://integrationtest.jiffy.ai/platform}"
+
 # Logging Configuration
 logging:
   level: "${LOG_LEVEL:info}"

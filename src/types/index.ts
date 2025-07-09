@@ -6,8 +6,8 @@ export interface ExecuteRequest {
   code: string;
   /** Array of parameters to pass to the function */
   input: any[];
-  /** Name of the function to call from the code */
-  functionName: string;
+  /** Name of the function to call from the code (defaults to 'main') */
+  functionName?: string;
 }
 
 /**

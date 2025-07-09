@@ -50,7 +50,7 @@ const server = Bun.serve({
           format: {
             code: 'JavaScript code with function definition',
             input: 'Array of parameters to pass to the function',
-            functionName: 'Name of the function to call'
+            functionName: 'Name of the function to call (optional, defaults to "main")'
           },
           example: {
             code: 'async function main(a, b) { return a + b; }',

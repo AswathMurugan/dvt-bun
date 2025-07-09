@@ -93,7 +93,7 @@ export async function handleExecuteWithSys(req: Request): Promise<Response> {
       });
     }
     
-    const { code, input, functionName } = body;
+    const { code, input, functionName = 'main' } = body;
     
     if (!code || typeof code !== 'string') {
       return new Response(JSON.stringify({ error: 'Code is required and must be a string' }), {
@@ -109,8 +109,8 @@ export async function handleExecuteWithSys(req: Request): Promise<Response> {
       });
     }
 
-    if (!functionName || typeof functionName !== 'string') {
-      return new Response(JSON.stringify({ error: 'Function name is required and must be a string' }), {
+    if (functionName && typeof functionName !== 'string') {
+      return new Response(JSON.stringify({ error: 'Function name must be a string' }), {
         status: 400,
         headers: { 'Content-Type': 'application/json' }
       });

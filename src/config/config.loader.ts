@@ -44,6 +44,8 @@ export interface ApplicationConfig {
       allowTimers: boolean;
     };
   };
+  nodeModulesPath: string;
+  dvtStorageHost: string;
   logging: {
     level: string;
     format: string;
@@ -236,7 +238,9 @@ export class ConfigLoader {
       'iam.url',
       'iam.clientId',
       'iam.clientSecret',
-      'execution.timeout'
+      'execution.timeout',
+      'nodeModulesPath',
+      'dvtStorageHost'
     ];
 
     for (const path of requiredPaths) {

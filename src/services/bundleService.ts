@@ -4,27 +4,28 @@
  */
 
 import { logger } from '../utils/logger';
+import { getConfig } from '../config/config.loader';
 
 /**
  * Bundle JavaScript/TypeScript code using ESBuild
  * Resolves ES6 imports from node_modules and bundles into executable code
  * 
  * @param code - The JavaScript/TypeScript code to bundle
- * @param nodeModulesPath - Path to node_modules directory (optional, defaults to project root)
  * @returns Promise resolving to bundled JavaScript code
  * @throws Error if bundling fails
  */
-export async function bundleCode(code: string, nodeModulesPath?: string): Promise<string> {
+export async function bundleCode(code: string): Promise<string> {
   try {
     // Dynamic import to avoid bundling esbuild in the main bundle
     const esbuild = require('esbuild');
     
-    const defaultNodeModulesPath = process.cwd() + '/node_modules';
-    const nodePaths = nodeModulesPath ? [nodeModulesPath] : [defaultNodeModulesPath];
+    // Get configuration
+    const config = getConfig();
+    const nodeModulesPath = config.nodeModulesPath;
     
     logger.info('BUNDLE Starting code bundling', {}, {
       codeLength: code.length,
-      nodeModulesPath: nodePaths[0]
+      nodeModulesPath
     });
     
     const result = await esbuild.build({
@@ -35,7 +36,7 @@ export async function bundleCode(code: string, nodeModulesPath?: string): Promis
       },
       format: 'esm', // ES Module format
       bundle: true, // Bundle all dependencies
-      nodePaths: nodePaths, // Node modules resolution paths
+      nodePaths: [nodeModulesPath], // Node modules resolution paths from config
       write: false, // Don't write to disk, return contents in memory
       minify: false, // Keep readable for debugging
       sourcemap: false, // No source maps needed
@@ -48,7 +49,7 @@ export async function bundleCode(code: string, nodeModulesPath?: string): Promis
     
     // Check for bundling errors
     if (result.errors && result.errors.length > 0) {
-      const errorMessages = result.errors.map(error => error.text).join(', ');
+      const errorMessages = result.errors.map((error: any) => error.text).join(', ');
       logger.error('BUNDLE Bundling failed with errors', {}, {
         errors: result.errors,
         errorMessages
@@ -60,7 +61,7 @@ export async function bundleCode(code: string, nodeModulesPath?: string): Promis
     if (result.warnings && result.warnings.length > 0) {
       logger.warn('BUNDLE Bundling completed with warnings', {}, {
         warnings: result.warnings,
-        warningMessages: result.warnings.map(warning => warning.text).join(', ')
+        warningMessages: result.warnings.map((warning: any) => warning.text).join(', ')
       });
     }
     
